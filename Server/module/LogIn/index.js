@@ -1,5 +1,5 @@
-const config = require('../../config/db');
-const sql = require("mssql");
+// models/authModel.js
+const pool = require('../../config/db');
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
@@ -7,33 +7,32 @@ require('dotenv').config();
 
 const loginUser = async (username, password) => {
   try {
-    const pool = await sql.connect(config);
+    // Query PostgreSQL
+    const userQuery = await pool.query(
+      `SELECT 
+         user_id,
+         username,
+         full_name,
+         password_hash,
+         is_admin
+       FROM users
+       WHERE username = $1`,
+      [username]
+    );
 
-    const userQuery = await pool.request()
-      .input("username", sql.VarChar, username)
-      .query(`
-        SELECT 
-          user_id,
-          username,
-          full_name,
-          password_hash,
-          is_admin
-        FROM users
-        WHERE username = @username
-      `);
-
-    if (userQuery.recordset.length === 0) {
+    if (userQuery.rows.length === 0) {
       return { success: false, message: "User not found." };
     }
 
-    const user = userQuery.recordset[0];
+    const user = userQuery.rows[0];
 
+    // Compare password hash
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
       return { success: false, message: "Invalid credentials." };
     }
 
-    // Generate JWT token (optional)
+    // Generate JWT token
     const token = jwt.sign(
       {
         user_id: user.user_id,
@@ -53,7 +52,7 @@ const loginUser = async (username, password) => {
         username: user.username,
         full_name: user.full_name,
         is_admin: user.is_admin,
-        accessToken:token
+        accessToken: token
       },
     };
   } catch (error) {

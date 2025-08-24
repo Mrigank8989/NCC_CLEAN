@@ -1,13 +1,12 @@
-const config = require('../../config/db');
-const sql = require('mssql');
+// models/userModel.js
+const pool = require('../config/db');
 const bcrypt = require('bcrypt');
 
 // Get all users
 const getAllUsers = async () => {
   try {
-    let pool = await sql.connect(config);
-    let Users = await pool.request().query("SELECT * FROM users"); // table name lowercase
-    return Users.recordset;
+    const result = await pool.query('SELECT * FROM users');
+    return result.rows; // PostgreSQL returns rows
   } catch (error) {
     console.error('Error fetching all users:', error);
     return { success: false, message: "Failed to fetch users." };
@@ -19,14 +18,13 @@ const createUser = async (username, fullName, password, isAdmin = false) => {
   try {
     console.log("User Data Received:", username, fullName, password);
 
-    let pool = await sql.connect(config);
-
     // Check if username already exists
-    const usernameCheck = await pool.request()
-      .input('Username', sql.VarChar(50), username)
-      .query('SELECT * FROM users WHERE username = @Username');
+    const usernameCheck = await pool.query(
+      'SELECT * FROM users WHERE username = $1',
+      [username]
+    );
 
-    if (usernameCheck.recordset.length > 0) {
+    if (usernameCheck.rows.length > 0) {
       console.log("Username already exists");
       return { success: false, message: "Username already exists. Please choose another." };
     }
@@ -35,15 +33,11 @@ const createUser = async (username, fullName, password, isAdmin = false) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Insert new user
-    await pool.request()
-      .input('Username', sql.VarChar(50), username)
-      .input('PasswordHash', sql.VarChar(255), hashedPassword)
-      .input('FullName', sql.VarChar(100), fullName)
-      .input('IsAdmin', sql.Bit, isAdmin ? 1 : 0)
-      .query(`
-        INSERT INTO users (username, password_hash, full_name, is_admin)
-        VALUES (@Username, @PasswordHash, @FullName, @IsAdmin)
-      `);
+    await pool.query(
+      `INSERT INTO users (username, password_hash, full_name, is_admin)
+       VALUES ($1, $2, $3, $4)`,
+      [username, hashedPassword, fullName, isAdmin]
+    );
 
     console.log("User successfully registered.");
     return { success: true, message: "User registered successfully." };

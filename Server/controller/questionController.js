@@ -1,6 +1,5 @@
 const { insertQuestion } = require('../module/questionModel');
-const sql = require('mssql');
-const dbConfig = require('../config/db');
+const pool = require('../config/db'); // PostgreSQL pool
 
 const addQuestion = async (req, res) => {
   try {
@@ -25,14 +24,12 @@ const addQuestion = async (req, res) => {
     });
 
     // Update the total_questions in the quizzes table
-    const pool = await sql.connect(dbConfig);
-    await pool.request()
-      .input('quiz_id', sql.Int, quiz_id)
-      .query(`
-        UPDATE quizzes
-        SET total_questions = total_questions + 1
-        WHERE quiz_id = @quiz_id
-      `);
+    await pool.query(
+      `UPDATE quizzes
+       SET total_questions = total_questions + 1
+       WHERE quiz_id = $1`,
+      [quiz_id]
+    );
 
     res.status(201).json({ message: 'Question added and quiz updated successfully' });
 

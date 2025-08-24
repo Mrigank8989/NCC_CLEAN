@@ -1,24 +1,26 @@
 // models/questionModel.js
-const sql = require('mssql');
-const dbConfig = require('../config/db');
+const pool = require('../config/db');
 
 const insertQuestion = async (questionData) => {
-  const pool = await sql.connect(dbConfig);
-  const result = await pool.request()
-    .input('quiz_id', sql.Int, questionData.quiz_id)
-    .input('question_text', sql.Text, questionData.question_text)
-    .input('option_1', sql.Text, questionData.option_1)
-    .input('option_2', sql.Text, questionData.option_2)
-    .input('option_3', sql.Text, questionData.option_3)
-    .input('option_4', sql.Text, questionData.option_4)
-    .input('correct_option', sql.Int, questionData.correct_option)
-    .query(`
-      INSERT INTO questions 
-      (quiz_id, question_text, option_1, option_2, option_3, option_4, correct_option)
-      VALUES (@quiz_id, @question_text, @option_1, @option_2, @option_3, @option_4, @correct_option)
-    `);
+  const query = `
+    INSERT INTO questions 
+      (quiz_id, question_text, option_a, option_b, option_c, option_d, correct_option)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    RETURNING *;
+  `;
 
-  return result;
+  const values = [
+    questionData.quiz_id,
+    questionData.question_text,
+    questionData.option_1,  // renamed to option_a in DB
+    questionData.option_2,  // renamed to option_b in DB
+    questionData.option_3,  // renamed to option_c in DB
+    questionData.option_4,  // renamed to option_d in DB
+    questionData.correct_option
+  ];
+
+  const result = await pool.query(query, values);
+  return result.rows[0]; // PostgreSQL returns rows
 };
 
 module.exports = {

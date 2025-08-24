@@ -19,7 +19,7 @@ wss.on("connection", function connection(ws) {
 });
 const WebSocket = require('ws');
 
-const wss = new WebSocket.Server({ port: 3001 });
+
 const clients = new Map();
 
 wss.on('connection', (ws) => {

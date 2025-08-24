@@ -1,18 +1,22 @@
-const sql = require('mssql');
-const dbConfig = require('../config/db'); // adjust path if needed
+// models/quizModel.js
+const pool = require('../config/db');
 
 async function insertQuiz(quiz) {
   try {
-    const pool = await sql.connect(dbConfig);
-    const result = await pool.request()
-      .input('difficulty', sql.VarChar(20), quiz.difficulty)
-      .input('set_number', sql.Int, quiz.set_number)
-      .input('title', sql.VarChar(100), quiz.title)
-      .query(`
-        INSERT INTO quizzes (difficulty, set_number, title)
-        VALUES (@difficulty, @set_number, @title);
-      `);
-    return result;
+    const query = `
+      INSERT INTO quizzes (difficulty, set_number, title)
+      VALUES ($1, $2, $3)
+      RETURNING *;
+    `;
+
+    const values = [
+      quiz.difficulty,
+      quiz.set_number,
+      quiz.title
+    ];
+
+    const result = await pool.query(query, values);
+    return result.rows[0]; // return the inserted quiz
   } catch (error) {
     throw error;
   }
@@ -20,11 +24,9 @@ async function insertQuiz(quiz) {
 
 async function getQuizById(quiz_id) {
   try {
-    const pool = await sql.connect(dbConfig);
-    const result = await pool.request()
-      .input('quiz_id', sql.Int, quiz_id)
-      .query('SELECT * FROM quizzes WHERE quiz_id = @quiz_id');
-    return result.recordset[0];
+    const query = 'SELECT * FROM quizzes WHERE quiz_id = $1';
+    const result = await pool.query(query, [quiz_id]);
+    return result.rows[0]; // single quiz
   } catch (error) {
     throw error;
   }

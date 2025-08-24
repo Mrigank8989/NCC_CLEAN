@@ -1,27 +1,27 @@
-const sql = require('mssql');
-const dbConfig = require('../config/db');
+// models/quizAttemptModel.js
+const pool = require('../config/db');
 
 const insertQuizAttempt = async (attemptData) => {
-  const pool = await sql.connect(dbConfig);
-  const result = await pool.request()
-    .input('user_id', sql.Int, attemptData.user_id)
-    .input('quiz_id', sql.Int, attemptData.quiz_id)
-    .input('score', sql.Int, attemptData.score)
-    .input('total_questions', sql.Int, attemptData.total_questions)
-    .input('percentage', sql.Decimal(5, 2), attemptData.percentage)
-    .input('time_taken', sql.VarChar(50), attemptData.time_taken)
-    .input('attempt_date', sql.DateTime, attemptData.attempt_date || new Date())
-    .input('is_completed', sql.Bit, attemptData.is_completed)
-    .query(`
-      INSERT INTO quiz_attempts (
-        user_id, quiz_id, score, total_questions, percentage, time_taken, attempt_date, is_completed
-      )
-      VALUES (
-        @user_id, @quiz_id, @score, @total_questions, @percentage, @time_taken, @attempt_date, @is_completed
-      )
-    `);
+  const query = `
+    INSERT INTO quiz_attempts 
+      (user_id, quiz_id, score, total_questions, percentage, time_taken, attempt_date, is_completed)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    RETURNING *;
+  `;
 
-  return result;
+  const values = [
+    attemptData.user_id,
+    attemptData.quiz_id,
+    attemptData.score,
+    attemptData.total_questions,
+    attemptData.percentage,
+    attemptData.time_taken,
+    attemptData.attempt_date || new Date(),
+    attemptData.is_completed
+  ];
+
+  const result = await pool.query(query, values);
+  return result.rows[0]; // PostgreSQL returns rows array
 };
 
 module.exports = {
