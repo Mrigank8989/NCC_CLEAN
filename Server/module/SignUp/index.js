@@ -1,5 +1,5 @@
 // models/userModel.js
-const pool = require('../config/db');
+const pool = require('../../config/db');
 const bcrypt = require('bcrypt');
 
 // Get all users
