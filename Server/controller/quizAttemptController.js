@@ -14,11 +14,15 @@ const addQuizAttempt = async (req, res) => {
       is_completed
     } = req.body;
 
-    // ✅ Step 1: Check if user already attempted this quiz
+    console.log('🎯 Received quiz attempt:', req.body); // <--- debug log
+
+    // ✅ Check if user already attempted this quiz
     const existingAttempt = await pool.query(
       'SELECT * FROM quiz_attempts WHERE user_id = $1 AND quiz_id = $2',
       [user_id, quiz_id]
     );
+
+    console.log('🔍 Existing attempt:', existingAttempt.rows); // <--- debug log
 
     if (existingAttempt.rows.length > 0) {
       return res.status(400).json({
@@ -26,7 +30,7 @@ const addQuizAttempt = async (req, res) => {
       });
     }
 
-    // ✅ Step 2: If not attempted, record the new attempt
+    // ✅ Record new attempt
     await insertQuizAttempt({
       user_id,
       quiz_id,
@@ -45,6 +49,4 @@ const addQuizAttempt = async (req, res) => {
   }
 };
 
-module.exports = {
-  addQuizAttempt
-};
+module.exports = { addQuizAttempt };
