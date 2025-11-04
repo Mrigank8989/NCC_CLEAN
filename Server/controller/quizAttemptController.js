@@ -1,3 +1,4 @@
+const pool = require('../config/db');
 const { insertQuizAttempt } = require('../module/quizAttemptModel');
 
 const addQuizAttempt = async (req, res) => {
@@ -13,6 +14,19 @@ const addQuizAttempt = async (req, res) => {
       is_completed
     } = req.body;
 
+    // ✅ Step 1: Check if user already attempted this quiz
+    const existingAttempt = await pool.query(
+      'SELECT * FROM quiz_attempts WHERE user_id = $1 AND quiz_id = $2',
+      [user_id, quiz_id]
+    );
+
+    if (existingAttempt.rows.length > 0) {
+      return res.status(400).json({
+        message: 'You have already attempted this quiz.'
+      });
+    }
+
+    // ✅ Step 2: If not attempted, record the new attempt
     await insertQuizAttempt({
       user_id,
       quiz_id,
