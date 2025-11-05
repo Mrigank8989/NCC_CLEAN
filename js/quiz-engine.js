@@ -70,65 +70,52 @@ function setupBlurDetection() {
 function initializeQuiz() {
   hasBlurred = false;
   const selectedQuiz = JSON.parse(sessionStorage.getItem("selectedQuiz"));
-  if (!selectedQuiz) return window.location.href = "dashboard.html";
-  const userId = localStorage.getItem("user_id");
+  if (!selectedQuiz) return (window.location.href = "dashboard.html");
 
-// ✅ Check if user already attempted this quiz
-fetch(`https://nccserver.onrender.com/api/attempts/check?user_id=${userId}&quiz_id=${selectedQuiz.setNumber}`)
-  .then(res => res.json())
-  .then(data => {
-    if (data.attempted) {
-      alert("You have already attempted this quiz. Redirecting to dashboard.");
-      window.location.href = "dashboard.html";
-    } else {
-      // Load quiz normally
-      const questions = quizData.getQuizQuestions(selectedQuiz.difficulty, selectedQuiz.setNumber);
-      if (!questions || questions.length === 0) {
-        alert("Failed to load quiz. Try again.");
-        return window.location.href = "dashboard.html";
-      }
-
-      currentQuiz = {
-        difficulty: selectedQuiz.difficulty,
-        setNumber: selectedQuiz.setNumber,
-        questions,
-        totalQuestions: questions.length
-      };
-
-      userAnswers = Array(currentQuiz.totalQuestions).fill(null);
-      document.getElementById("quizTitle").textContent =
-        `${capitalizeFirstLetter(currentQuiz.difficulty)} - Quiz Set ${currentQuiz.setNumber}`;
-
-      showQuestion(0);
-      startTimer();
-    }
-  })
-  .catch(err => {
-    console.error("Error checking quiz attempt:", err);
-    alert("Error verifying quiz attempt. Please try again later.");
-    window.location.href = "dashboard.html";
-  });
-
-
-  const questions = quizData.getQuizQuestions(selectedQuiz.difficulty, selectedQuiz.setNumber);
-  if (!questions || questions.length === 0) {
-    alert("Failed to load quiz. Try again.");
-    return window.location.href = "dashboard.html";
+  const user = JSON.parse(localStorage.getItem("ncc_logged_user"));
+  if (!user || !user.user_id) {
+    alert("User not logged in. Redirecting to login.");
+    return (window.location.href = "index.html");
   }
 
-  currentQuiz = {
-    difficulty: selectedQuiz.difficulty,
-    setNumber: selectedQuiz.setNumber,
-    questions,
-    totalQuestions: questions.length
-  };
+  const userId = user.user_id;
+  const quizId = selectedQuiz.setNumber;
 
-  userAnswers = Array(currentQuiz.totalQuestions).fill(null);
-  document.getElementById("quizTitle").textContent =
-    `${capitalizeFirstLetter(currentQuiz.difficulty)} - Quiz Set ${currentQuiz.setNumber}`;
+  // ✅ Check if user already attempted this quiz
+  fetch(`https://nccserver.onrender.com/api/attempts/check?user_id=${userId}&quiz_id=${quizId}`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.attempted) {
+        alert("⚠️ You have already attempted this quiz. Redirecting to dashboard.");
+        window.location.href = "dashboard.html";
+      } else {
+        // ✅ Load quiz normally
+        const questions = quizData.getQuizQuestions(selectedQuiz.difficulty, selectedQuiz.setNumber);
+        if (!questions || questions.length === 0) {
+          alert("Failed to load quiz. Try again.");
+          return (window.location.href = "dashboard.html");
+        }
 
-  showQuestion(0);
-  startTimer();
+        currentQuiz = {
+          difficulty: selectedQuiz.difficulty,
+          setNumber: selectedQuiz.setNumber,
+          questions,
+          totalQuestions: questions.length
+        };
+
+        userAnswers = Array(currentQuiz.totalQuestions).fill(null);
+        document.getElementById("quizTitle").textContent =
+          `${capitalizeFirstLetter(currentQuiz.difficulty)} - Quiz Set ${currentQuiz.setNumber}`;
+
+        showQuestion(0);
+        startTimer();
+      }
+    })
+    .catch(err => {
+      console.error("❌ Error checking quiz attempt:", err);
+      alert("Error verifying quiz attempt. Please try again later.");
+      window.location.href = "dashboard.html";
+    });
 }
 
 function showQuestion(index) {
