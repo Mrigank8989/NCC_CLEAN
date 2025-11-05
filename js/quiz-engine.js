@@ -71,6 +71,44 @@ function initializeQuiz() {
   hasBlurred = false;
   const selectedQuiz = JSON.parse(sessionStorage.getItem("selectedQuiz"));
   if (!selectedQuiz) return window.location.href = "dashboard.html";
+  const userId = localStorage.getItem("user_id");
+
+// ✅ Check if user already attempted this quiz
+fetch(`https://nccserver.onrender.com/api/attempts/check?user_id=${userId}&quiz_id=${selectedQuiz.setNumber}`)
+  .then(res => res.json())
+  .then(data => {
+    if (data.attempted) {
+      alert("You have already attempted this quiz. Redirecting to dashboard.");
+      window.location.href = "dashboard.html";
+    } else {
+      // Load quiz normally
+      const questions = quizData.getQuizQuestions(selectedQuiz.difficulty, selectedQuiz.setNumber);
+      if (!questions || questions.length === 0) {
+        alert("Failed to load quiz. Try again.");
+        return window.location.href = "dashboard.html";
+      }
+
+      currentQuiz = {
+        difficulty: selectedQuiz.difficulty,
+        setNumber: selectedQuiz.setNumber,
+        questions,
+        totalQuestions: questions.length
+      };
+
+      userAnswers = Array(currentQuiz.totalQuestions).fill(null);
+      document.getElementById("quizTitle").textContent =
+        `${capitalizeFirstLetter(currentQuiz.difficulty)} - Quiz Set ${currentQuiz.setNumber}`;
+
+      showQuestion(0);
+      startTimer();
+    }
+  })
+  .catch(err => {
+    console.error("Error checking quiz attempt:", err);
+    alert("Error verifying quiz attempt. Please try again later.");
+    window.location.href = "dashboard.html";
+  });
+
 
   const questions = quizData.getQuizQuestions(selectedQuiz.difficulty, selectedQuiz.setNumber);
   if (!questions || questions.length === 0) {
@@ -228,6 +266,29 @@ function finishQuiz() {
     date: new Date().toISOString(),
     snapshot
   });
+  // 🧠 Send quiz result to backend
+const userId = localStorage.getItem("user_id"); // Adjust if you store differently
+const attemptData = {
+  user_id: userId,
+  quiz_id: currentQuiz.setNumber,
+  score,
+  total_questions: currentQuiz.totalQuestions,
+  percentage,
+  time_taken: timeElapsed,
+  is_completed: true
+};
+
+fetch("https://nccserver.onrender.com/api/attempts", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify(attemptData),
+})
+  .then(res => res.json())
+  .then(data => console.log("✅ Quiz attempt saved:", data))
+  .catch(err => console.error("❌ Error saving quiz attempt:", err));
+
 }
 
 function reviewQuiz() {
