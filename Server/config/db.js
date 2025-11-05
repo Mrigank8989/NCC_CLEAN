@@ -1,25 +1,18 @@
 require('dotenv').config();
 const { Pool } = require('pg');
 
-// PostgreSQL connection pool (for Neon + Render)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    require: true,              // important for Neon
-    rejectUnauthorized: false   // allows Render to connect without CA cert
+    require: true,
+    rejectUnauthorized: false
   },
-  connectionTimeoutMillis: 10000, // 10 seconds
-  idleTimeoutMillis: 30000        // prevent idle disconnects
+  max: 5,                  // Limit pool size
+  idleTimeoutMillis: 30000, // Close idle clients after 30s
+  connectionTimeoutMillis: 10000 // 10s connect timeout
 });
 
-// Connection events (for debugging)
-pool.on('connect', () => {
-  console.log('✅ Connected to PostgreSQL (Neon)');
-});
-
-pool.on('error', (err) => {
-  console.error('❌ Unexpected error on idle client:', err);
-  process.exit(-1);
-});
+pool.on('connect', () => console.log('✅ Connected to PostgreSQL (Neon)'));
+pool.on('error', (err) => console.error('❌ Unexpected PG Pool Error:', err));
 
 module.exports = pool;
