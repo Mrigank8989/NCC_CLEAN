@@ -137,32 +137,47 @@ function logoutUser() {
   window.location.href = 'index.html';
 }
 
-function saveQuizScore(quizData) {
-  const user = getLoggedInUser();
-  if (!user) return alert("No user logged in.");
+saveQuizScore: async function(scoreData) {
+  try {
+    const user = JSON.parse(localStorage.getItem("ncc_logged_user"));
+    if (!user) {
+      alert("User not logged in!");
+      return;
+    }
 
-  const users = JSON.parse(localStorage.getItem(USERS_KEY)) || {};
-
-  if (!users[user.username]) {
-    users[user.username] = {
-      fullName: user.full_name || '',
-      quizzesTaken: []
+    // Prepare data for backend
+    const payload = {
+      user_id: user.user_id,           // your backend expects this
+      quiz_id: scoreData.setNumber,    // if quiz_id is same as setNumber
+      score: scoreData.score,
+      total_questions: scoreData.totalQuestions,
+      percentage: scoreData.percentage,
+      time_taken: 300,                 // or your timer variable
+      is_completed: true
     };
+
+    // Call backend
+    const response = await fetch("https://nccserver.onrender.com/api/attempts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+    console.log("Quiz attempt response:", result);
+
+    if (!response.ok) {
+      alert(result.message || "Failed to record attempt.");
+      return;
+    }
+
+    alert("✅ Quiz submitted successfully!");
+  } catch (error) {
+    console.error("❌ Error saving quiz attempt:", error);
+    alert("Error saving quiz attempt. Please try again.");
   }
-
-  users[user.username].quizzesTaken.push({
-    difficulty: quizData.difficulty,
-    setNumber: quizData.setNumber,
-    score: quizData.score,
-    totalQuestions: quizData.totalQuestions,
-    percentage: quizData.percentage,
-    snapshot: quizData.snapshot || null,
-    date: new Date().toISOString()
-  });
-
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  return true;
 }
+
 
 function getUserScores() {
   const user = getLoggedInUser();
