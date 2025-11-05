@@ -82,7 +82,8 @@ function initializeQuiz() {
   const quizId = selectedQuiz.setNumber;
 
   // ✅ Check if user already attempted this quiz
-  fetch(`https://nccserver.onrender.com/api/attempts/check?user_id=${userId}&quiz_id=${quizId}`)
+  fetch(`https://nccserver.onrender.com/api/check-attempt?user_id=${userId}&quiz_id=${selectedQuiz.setNumber}`)
+
     .then(res => res.json())
     .then(data => {
       if (data.attempted) {
