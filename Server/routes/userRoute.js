@@ -17,9 +17,27 @@ router.get('/:quiz_id', fetchQuizById);
 router.post('/add-question', addQuestion);
 
 // ─── Quiz Attempt Routes ───────────────────────────────────────
-router.post('/attempts', addQuizAttempt);
+router.get('/attempts/check', async (req, res) => {
+  const { user_id, quiz_id } = req.query;
 
-// ✅ new endpoint to check whether a user already attempted the quiz
-router.get('/attempts/check', checkQuizAttempt);
+  try {
+    const result = await pool.query(
+      'SELECT * FROM quiz_attempts WHERE user_id = $1 AND quiz_id = $2',
+      [user_id, quiz_id]
+    );
+
+    if (result.rows.length > 0) {
+      return res.json({ attempted: true });
+    } else {
+      return res.json({ attempted: false });
+    }
+  } catch (error) {
+    console.error('Error checking quiz attempt:', error);
+    res.status(500).json({ message: 'Error checking quiz attempt' });
+  }
+});
+
+// ✅ Add new attempt (only if first)
+router.post('/attempts', addQuizAttempt);
 
 module.exports = router;
