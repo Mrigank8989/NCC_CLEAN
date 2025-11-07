@@ -1,14 +1,31 @@
-const http = require('http');
-const app = require('./Backend'); 
+const express = require('express');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const userRoutes = require('./routes/userRoute'); // Adjust the path if necessary
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('./swagger-output.json');
 
-const dotenv = require('dotenv');
+const app = express();
 
+// ✅ Middleware
+app.use(bodyParser.json());
 
-dotenv.config();
+// ✅ CORS configuration (supports both local + deployed frontend)
+const corsOptions = {
+  origin: [
+    'https://nccproject.onrender.com', // your deployed frontend
+    'http://localhost:5173'            // for local development
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+};
+app.use(cors(corsOptions));
 
-const PORT = process.env.PORT;
-// Create and start the server
-const server = http.createServer(app);
-server.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+// ✅ API Routes
+app.use('/api', userRoutes);
+
+// ✅ Swagger API Docs
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
+// ✅ Export the app for server.js
+module.exports = app;
