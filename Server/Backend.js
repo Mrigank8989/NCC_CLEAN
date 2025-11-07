@@ -10,26 +10,32 @@ const app = express();
 // ✅ Middleware
 app.use(bodyParser.json());
 
-// ✅ CORS configuration
-const corsOptions = {
-  origin: [
-    'https://nccproject.onrender.com', // your frontend domain
-    'http://localhost:5173'            // for local testing
-  ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-};
+// ✅ Proper CORS Configuration
+const allowedOrigins = [
+  'https://nccproject.onrender.com', // your frontend
+  'http://localhost:5173',           // for local dev
+];
 
-app.use(cors(corsOptions));
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
 
-// ✅ For preflight OPTIONS requests
-app.options('*', cors(corsOptions));
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
 
-// ✅ Routes
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200); // Preflight
+  }
+  next();
+});
+
+// ✅ API Routes
 app.use('/api', userRoutes);
 
-// ✅ Swagger API Docs
+// ✅ Swagger Docs
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 module.exports = app;
