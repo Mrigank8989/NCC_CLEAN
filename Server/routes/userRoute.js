@@ -1,22 +1,26 @@
 const express = require('express');
 const router = express.Router();
+const pool = require('../config/db'); // ✅ FIX: import PostgreSQL connection
 
+// ─── Controllers ──────────────────────────────────────────────
 const { fetchAllUsers, createUserController, SignIn } = require("../controller/authController");
 const { addQuestion } = require('../controller/questionController');
 const { addQuiz, fetchQuizById } = require('../controller/quizController');
-const { addQuizAttempt, checkQuizAttempt } = require('../controller/quizAttemptController'); // ✅ imported new controller
+const { addQuizAttempt } = require('../controller/quizAttemptController');
 
-// ─── Authentication Routes ──────────────────────────────────────────────
-router.get('/getAllUsers', fetchAllUsers);                  
-router.post('/SignUp', createUserController);               
-router.post('/SignIn', SignIn);                             
+// ─── Authentication Routes ────────────────────────────────────
+router.get('/getAllUsers', fetchAllUsers);
+router.post('/SignUp', createUserController);
+router.post('/SignIn', SignIn);
 
 // ─── Quiz Routes ──────────────────────────────────────────────
 router.post('/addQuiz', addQuiz);
 router.get('/:quiz_id', fetchQuizById);
 router.post('/add-question', addQuestion);
 
-// ─── Quiz Attempt Routes ───────────────────────────────────────
+// ─── Quiz Attempt Routes ──────────────────────────────────────
+
+// ✅ Check if user already attempted this quiz
 router.get('/attempts/check', async (req, res) => {
   const { user_id, quiz_id } = req.query;
 
@@ -37,7 +41,7 @@ router.get('/attempts/check', async (req, res) => {
   }
 });
 
-// ✅ Add new attempt (only if first)
+// ✅ Record new quiz attempt
 router.post('/attempts', addQuizAttempt);
 
 module.exports = router;
