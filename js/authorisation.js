@@ -1,4 +1,5 @@
-const USERS_KEY = 'ncc_quiz_users';
+// ======================= AUTHORIZATION.JS =======================
+
 const AUTH_KEY = 'ncc_quiz_auth';
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -10,7 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const loginContainer = document.querySelector(".login-form");
   const registerContainer = document.querySelector(".register-form");
 
-  // Toggle between login and register forms
+  // ─── Toggle between login and register ─────────────────────────────
   registerLink?.addEventListener("click", (e) => {
     e.preventDefault();
     loginContainer.classList.add("hidden");
@@ -23,7 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loginContainer.classList.remove("hidden");
   });
 
-  // Handle login
+  // ─── Login ─────────────────────────────────────────────────────────
   if (loginForm) {
     loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -32,7 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const password = document.getElementById("password").value;
 
       try {
-        const response = await fetch("https://ncc-aivsc.onrender.com/api/SignIn", {
+        const response = await fetch("https://nccserver.onrender.com/api/SignIn", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username, password }),
@@ -42,8 +43,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await response.json();
         console.log("Login response:", data);
 
-        if (response.ok) {
-          alert("Login successful!");
+        if (response.ok && data.success) {
+          alert("✅ Login successful!");
+
           const user = {
             user_id: data.user.user_id,
             full_name: data.user.full_name,
@@ -52,7 +54,10 @@ document.addEventListener("DOMContentLoaded", () => {
             accessToken: data.accessToken
           };
 
+          // ✅ Store only auth info
           localStorage.setItem(AUTH_KEY, JSON.stringify(user));
+
+          // Redirect based on role
           window.location.href = user.is_admin ? "admin.html" : "dashboard.html";
         } else {
           alert("Login failed: " + (data.message || "Invalid credentials"));
@@ -64,7 +69,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Handle registration
+  // ─── Registration ───────────────────────────────────────────────
   registerForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -73,14 +78,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const password = document.getElementById("regPassword").value;
     const confirmPassword = document.getElementById("confirmPassword").value;
     const adminCode = document.getElementById("adminCode").value.trim();
-    const isAdmin = (adminCode === "secretwalicode"); // Update this as needed
+    const isAdmin = (adminCode === "secretwalicode"); // 🔐 optional
 
     if (password !== confirmPassword) {
       return alert("Passwords do not match.");
     }
 
     try {
-      const response = await fetch("https://ncc-aivsc.onrender.com/api/SignUp", {
+      const response = await fetch("https://nccserver.onrender.com/api/SignUp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -94,7 +99,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await response.json();
 
       if (response.ok) {
-        alert("Registered successfully! Please login.");
+        alert("✅ Registered successfully! Please login.");
         registerContainer.classList.add("hidden");
         loginContainer.classList.remove("hidden");
       } else {
@@ -106,16 +111,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Logout button
+  // ─── Logout ────────────────────────────────────────────────────
   const logoutBtn = document.getElementById("logoutBtn");
   logoutBtn?.addEventListener("click", () => {
-    localStorage.removeItem(AUTH_KEY);
-    alert("You have been logged out.");
-    window.location.href = 'index.html';
+    logoutUser();
   });
 });
 
-// ========== Utility Functions ==========
+// ─── Utility: Auth Handling ─────────────────────────────────────────
 
 function isLoggedIn() {
   return !!localStorage.getItem(AUTH_KEY);
@@ -137,26 +140,27 @@ function logoutUser() {
   window.location.href = 'index.html';
 }
 
-saveQuizScore: async function(scoreData) {
+// ─── Save Quiz Result to Backend ─────────────────────────────────
+async function saveQuizScore(scoreData) {
   try {
-    const user = JSON.parse(localStorage.getItem("ncc_logged_user"));
+    const user = getLoggedInUser();
     if (!user) {
       alert("User not logged in!");
       return;
     }
 
-    // Prepare data for backend
     const payload = {
-      user_id: user.user_id,           // your backend expects this
-      quiz_id: scoreData.setNumber,    // if quiz_id is same as setNumber
+      user_id: user.user_id,
+      quiz_id: scoreData.setNumber,
       score: scoreData.score,
       total_questions: scoreData.totalQuestions,
       percentage: scoreData.percentage,
-      time_taken: 300,                 // or your timer variable
+      time_taken: scoreData.timeTaken || 0,
       is_completed: true
     };
 
-    // Call backend
+    console.log("📤 Sending quiz result to backend:", payload);
+
     const response = await fetch("https://nccserver.onrender.com/api/attempts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -164,7 +168,7 @@ saveQuizScore: async function(scoreData) {
     });
 
     const result = await response.json();
-    console.log("Quiz attempt response:", result);
+    console.log("✅ Quiz attempt response:", result);
 
     if (!response.ok) {
       alert(result.message || "Failed to record attempt.");
@@ -178,43 +182,11 @@ saveQuizScore: async function(scoreData) {
   }
 }
 
-
-function getUserScores() {
-  const user = getLoggedInUser();
-  if (!user) return [];
-  const users = JSON.parse(localStorage.getItem(USERS_KEY)) || {};
-  return users[user.username]?.quizzesTaken || [];
-}
-
-function getAllScores() {
-  const users = JSON.parse(localStorage.getItem(USERS_KEY)) || {};
-  const allScores = [];
-
-  Object.keys(users).forEach(username => {
-    (users[username].quizzesTaken || []).forEach(quiz => {
-      allScores.push({
-        username,
-        fullName: users[username].fullName || '',
-        ...quiz
-      });
-    });
-  });
-
-  return allScores.sort((a, b) => new Date(b.date) - new Date(a.date));
-}
-
-function isAdmin() {
-  const user = getLoggedInUser();
-  return user?.is_admin === true;
-}
-
-// ✅ Expose to global scope
+// ─── Expose Functions Globally ──────────────────────────────────
 window.auth = {
   getCurrentUser,
   logoutUser,
   getLoggedInUser,
   saveQuizScore,
-  getUserScores,
-  getAllScores,
-  isAdmin,
+  isLoggedIn
 };
