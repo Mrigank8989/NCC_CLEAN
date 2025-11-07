@@ -1,46 +1,28 @@
-const express = require('express');
-const router = express.Router();
+// models/questionModel.js
 const pool = require('../config/db');
 
-// ─── Controllers ──────────────────────────────────────────────
-const { fetchAllUsers, createUserController, SignIn } = require("../controller/authController");
-const { addQuestion } = require('../controller/questionController');
-const { addQuiz, fetchQuizById } = require('../controller/quizController');
-const { addQuizAttempt } = require('../controller/quizAttemptController');
+const insertQuestion = async (questionData) => {
+  const query = `
+    INSERT INTO questions 
+      (quiz_id, question_text, option_a, option_b, option_c, option_d, correct_option)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    RETURNING *;
+  `;
 
-// ─── Authentication Routes ────────────────────────────────────
-router.get('/getAllUsers', fetchAllUsers);
-router.post('/SignUp', createUserController);
-router.post('/SignIn', SignIn);
+  const values = [
+    questionData.quiz_id,
+    questionData.question_text,
+    questionData.option_1,  // renamed to option_a in DB
+    questionData.option_2,  // renamed to option_b in DB
+    questionData.option_3,  // renamed to option_c in DB
+    questionData.option_4,  // renamed to option_d in DB
+    questionData.correct_option
+  ];
 
-// ─── Quiz Routes ──────────────────────────────────────────────
-router.post('/addQuiz', addQuiz);
-router.get('/quiz/:quiz_id', fetchQuizById);
-router.post('/add-question', addQuestion);
+  const result = await pool.query(query, values);
+  return result.rows[0]; // PostgreSQL returns rows
+};
 
-// ─── Quiz Attempt Routes ──────────────────────────────────────
-
-// ✅ Check if user already attempted the quiz
-router.get('/attempts/check', async (req, res) => {
-  const { user_id, quiz_id } = req.query;
-
-  try {
-    const result = await pool.query(
-      'SELECT * FROM quiz_attempts WHERE user_id = $1 AND quiz_id = $2',
-      [user_id, quiz_id]
-    );
-
-    res.json({ attempted: result.rows.length > 0 });
-  } catch (error) {
-    console.error('❌ Error checking quiz attempt:', error);
-    res.status(500).json({ message: 'Error checking quiz attempt' });
-  }
-});
-
-// ✅ Add new quiz attempt
-router.post('/attempts', async (req, res, next) => {
-  console.log('📩 Incoming quiz attempt data:', req.body);
-  next(); // Pass to controller (addQuizAttempt)
-}, addQuizAttempt);
-
-module.exports = router;
+module.exports = {
+  insertQuestion
+};
