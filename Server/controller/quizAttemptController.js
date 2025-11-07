@@ -1,6 +1,7 @@
 const { insertQuizAttempt } = require('../module/quizAttemptModel');
-const pool = require('../config/db'); // ✅ Import DB connection
+const pool = require('../config/db');
 
+// ✅ Add logic to prevent duplicate attempts
 const addQuizAttempt = async (req, res) => {
   try {
     const {
@@ -14,18 +15,17 @@ const addQuizAttempt = async (req, res) => {
       is_completed
     } = req.body;
 
-    // ✅ Check if the user already attempted this quiz
-    const existingAttempt = await pool.query(
+    // 1️⃣ Check if the user already attempted this quiz
+    const check = await pool.query(
       'SELECT * FROM quiz_attempts WHERE user_id = $1 AND quiz_id = $2',
       [user_id, quiz_id]
     );
 
-    if (existingAttempt.rows.length > 0) {
-      console.log(`❌ User ${user_id} already attempted quiz ${quiz_id}`);
-      return res.status(400).json({ message: 'User has already attempted this quiz.' });
+    if (check.rows.length > 0) {
+      return res.status(400).json({ message: "User has already attempted this quiz." });
     }
 
-    // ✅ If not attempted before, insert the attempt
+    // 2️⃣ Insert the new attempt
     await insertQuizAttempt({
       user_id,
       quiz_id,
@@ -37,14 +37,11 @@ const addQuizAttempt = async (req, res) => {
       is_completed
     });
 
-    console.log(`✅ Attempt added for user ${user_id}, quiz ${quiz_id}`);
-    res.status(201).json({ message: 'Quiz attempt recorded successfully' });
+    res.status(201).json({ message: "Quiz attempt recorded successfully" });
   } catch (error) {
-    console.error('❌ Error adding quiz attempt:', error);
-    res.status(500).json({ message: 'Failed to add quiz attempt' });
+    console.error("Error adding quiz attempt:", error);
+    res.status(500).json({ message: "Failed to add quiz attempt" });
   }
 };
 
-module.exports = {
-  addQuizAttempt
-};
+module.exports = { addQuizAttempt };
