@@ -181,7 +181,6 @@ async function saveQuizScore(scoreData) {
     alert("Error saving quiz attempt. Please try again.");
   }
 }
-
 // ─── Expose Functions Globally ──────────────────────────────────
 window.auth = {
   getCurrentUser,
